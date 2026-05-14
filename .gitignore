@@ -1,0 +1,32 @@
+# Model weights (auto-downloaded)
+*.pt
+*.onnx
+
+# Input videos (typically too large for git)
+input/
+*.mp4
+*.avi
+*.mov
+*.mkv
+
+# Output artifacts
+output/
+snapshots/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# OS
+Thumbs.db
