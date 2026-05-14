@@ -1,33 +1,3 @@
-"""
-Escalator State Monitor v2.1
-
-Patch over v2:
-  * Fixed preview window appearing "zoomed in" on high-resolution input.
-    The saved MP4 was always correct; only the on-screen cv2.imshow window
-    was opening at 1:1 pixel size, which exceeds typical laptop screens
-    for 1080p+ video so you only saw the center of the frame.
-  * Fix: cv2.namedWindow with WINDOW_NORMAL + WINDOW_KEEPRATIO, then
-    cv2.resizeWindow scaled to fit the screen. Preview is now letterboxed,
-    full frame visible, no zoom.
-  * Plus optional cv2.WND_PROP_FULLSCREEN toggle via 'f' key.
-
-All other v2 functionality unchanged. Key upgrades over v1:
-  1. Quadrilateral (perspective-aware) ROI instead of axis-aligned box.
-  2. ROI persistence per video (JSON sidecar, no re-drawing on every run).
-  3. Directional optical-flow check — kills the "people walking on a stopped
-     escalator" false positive. Handrails must move vertically AND in the same
-     direction; steps must agree.
-  4. ByteTrack-style detection skipping — YOLO every N frames, IoU-track in
-     between. ~3x compute saving.
-  5. Snapshot saving on WORKING -> STOPPED/FAULT transition.
-  6. Per-camera YAML config (constants are now overrideable, not hardcoded).
-  7. Patched state-machine: low motion + ANY people now correctly enters fault.
-  8. DIS optical flow (3-5x faster than Farneback, similar quality).
-     Falls back to Farneback if opencv-contrib not installed.
-
-Controls: q=quit, p=pause/resume, r=reselect ROI, s=snapshot, f=fullscreen toggle
-"""
-
 import argparse
 import csv
 import json
