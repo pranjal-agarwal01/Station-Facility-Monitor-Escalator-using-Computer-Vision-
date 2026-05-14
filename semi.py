@@ -55,7 +55,7 @@ except ImportError:
 @dataclass
 class Config:
     # I/O
-    input_video: str = "input/stop3.mp4"
+    input_video: str = "input/stopp.mp4"
     output_video: str = "output/result.mp4"
     events_csv: str = "output/events.csv"
     snapshot_dir: str = "output/snapshots"
