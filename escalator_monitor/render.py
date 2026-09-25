@@ -51,6 +51,8 @@ class Renderer:
         rails = rasterize(polys["left"], shape, (x0, y0)) | rasterize(polys["right"], shape, (x0, y0))
         self.rail_mask = rails.astype(bool)
         self.steps_mask = rasterize(polys["steps"], shape, (x0, y0)).astype(bool)
+        self.region_mask = (rails | self.steps_mask).astype(np.uint8)
+        self._layers: dict[tuple[bool, bool], np.ndarray] = {}
 
     # ------------------------------------------------------------------------
     def draw(self, frame: np.ndarray, r: FrameResult, total_frames: int = 0, proc_fps: float = 0.0) -> np.ndarray:
@@ -79,13 +81,21 @@ class Renderer:
             cv2.rectangle(out, (0, self.h - max(3, int(4 * self.ui))), (bar, self.h), fill, -1)
         return out
 
+    def _tint_layer(self, rails_moving: bool, steps_moving: bool) -> np.ndarray:
+        key = (rails_moving, steps_moving)
+        if key not in self._layers:
+            layer = np.zeros((*self.rail_mask.shape, 3), np.uint8)
+            layer[self.rail_mask] = MOVING_TINT if rails_moving else STILL_TINT
+            layer[self.steps_mask] = MOVING_TINT if steps_moving else STILL_TINT
+            self._layers[key] = layer
+        return self._layers[key]
+
     def _tint_regions(self, out: np.ndarray, r: FrameResult) -> None:
         x0, y0, x1, y1 = self.box
         roi = out[y0:y1, x0:x1]
-        tint = roi.copy()
-        tint[self.rail_mask] = MOVING_TINT if r.motion.handrail_score > 0.3 else STILL_TINT
-        tint[self.steps_mask] = MOVING_TINT if r.motion.steps_score > 0.3 else STILL_TINT
-        cv2.addWeighted(tint, 0.14, roi, 0.86, 0, dst=roi)
+        layer = self._tint_layer(r.motion.handrail_score > 0.3, r.motion.steps_score > 0.3)
+        blended = cv2.addWeighted(layer, 0.14, roi, 0.86, 0)
+        roi[...] = cv2.copyTo(blended, self.region_mask, roi.copy())  # blend inside the ROI only
 
     def _draw_people(self, out: np.ndarray, r: FrameResult) -> None:
         for track in r.people:
