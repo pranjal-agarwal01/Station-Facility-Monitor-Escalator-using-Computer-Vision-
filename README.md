@@ -1,7 +1,7 @@
 # Escalator Monitor
 
 [![CI](https://github.com/pranjal-agarwal01/Station-Facility-Monitor-Escalator-using-Computer-Vision-/actions/workflows/ci.yml/badge.svg)](https://github.com/pranjal-agarwal01/Station-Facility-Monitor-Escalator-using-Computer-Vision-/actions/workflows/ci.yml)
-[![Live demo](https://img.shields.io/badge/live%20demo-runs%20in%20your%20browser-2a78d6)](https://pranjal-agarwal01.github.io/Station-Facility-Monitor-Escalator-using-Computer-Vision-/)
+[![Live demo](https://img.shields.io/badge/live%20demo-runs%20in%20your%20browser-2a78d6)](https://stationwatch.pranjalagarwal.me)
 ![Python](https://img.shields.io/badge/python-3.10%2B-3776ab)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
@@ -15,9 +15,10 @@ It needs no new hardware and no training data. It combines a pretrained person
 detector (YOLO11) with dense optical flow, and every decision can be traced
 back to numbers shown on screen.
 
-**[Try the live demo](https://pranjal-agarwal01.github.io/Station-Facility-Monitor-Escalator-using-Computer-Vision-/)**: it runs entirely in your browser (YOLO through
-ONNX Runtime Web, optical flow through OpenCV.js), so there is nothing to
-install and your video never leaves your computer.
+**Live demo: [stationwatch.pranjalagarwal.me](https://stationwatch.pranjalagarwal.me)**. It runs
+entirely in your browser (YOLO through ONNX Runtime Web, optical flow through
+OpenCV.js), so there is nothing to install and your video never leaves your
+computer.
 
 <p align="center">
   <img src="docs/demo.gif" alt="Annotated output: the escalator stops while people are on it and the status switches to STOPPED / FAULT" width="480">
@@ -255,7 +256,13 @@ visitor's browser, so there is no server to pay for or keep awake.
    Source* to **GitHub Actions** (one time).
 2. Push to `main` (or run the **Website** workflow from the Actions tab). The
    workflow runs the JavaScript tests, exports YOLO11n to ONNX, renders the
-   demo clips and publishes the site to `https://pranjal-agarwal01.github.io/Station-Facility-Monitor-Escalator-using-Computer-Vision-/`.
+   demo clips and publishes the site.
+3. Custom domain (optional): add a `CNAME` record for the subdomain pointing
+   to `<github-user>.github.io` at your DNS provider, enter the subdomain under
+   *Settings → Pages → Custom domain*, then tick *Enforce HTTPS*.
+
+This repository's site is live at
+[stationwatch.pranjalagarwal.me](https://stationwatch.pranjalagarwal.me).
 
 The browser version runs the same logic as the Python package, with these
 differences: optical flow is Farneback (OpenCV.js has no DIS), frames are
@@ -361,6 +368,12 @@ SVG charts. GitHub Actions for CI and GitHub Pages, Docker.
 2. Farnebäck, *Two-Frame Motion Estimation Based on Polynomial Expansion*, SCIA 2003.
 3. Redmon et al., *You Only Look Once: Unified, Real-Time Object Detection*, CVPR 2016.
 4. [Ultralytics YOLO11 documentation](https://docs.ultralytics.com/)
+
+## Author
+
+Made by **Pranjal Agarwal**. [Portfolio](https://pranjalagarwal.me) ·
+[LinkedIn](https://www.linkedin.com/in/pranjal-agarwal01): happy to connect
+and talk about computer vision, this project or opportunities.
 
 ## License
 
