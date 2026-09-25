@@ -1,0 +1,55 @@
+name: Deploy demo
+
+# Publishes app.py + the package to a Hugging Face Space on every push to main.
+# One-time setup: add a repository secret HF_TOKEN (a Hugging Face token with
+# write access). Optionally set a repository variable HF_SPACE (user/space-name);
+# the default is <your HF user>/escalator-monitor, created on first deploy.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app.py"
+      - "escalator_monitor/**"
+      - "examples/**"
+      - "deploy/huggingface/**"
+      - ".github/workflows/deploy-space.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-space
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      HF_SPACE: ${{ vars.HF_SPACE }}
+    steps:
+      - name: Skip without a token
+        if: env.HF_TOKEN == ''
+        run: echo "::notice::Add an HF_TOKEN repository secret to deploy the web demo to Hugging Face Spaces."
+
+      - uses: actions/checkout@v4
+        if: env.HF_TOKEN != ''
+
+      - uses: actions/setup-python@v5
+        if: env.HF_TOKEN != ''
+        with:
+          python-version: "3.11"
+
+      - name: Assemble the Space
+        if: env.HF_TOKEN != ''
+        run: |
+          mkdir space
+          cp -r app.py escalator_monitor LICENSE space/
+          if [ -d examples ]; then cp -r examples space/; fi
+          cp deploy/huggingface/README.md deploy/huggingface/requirements.txt deploy/huggingface/packages.txt space/
+          find space -name "__pycache__" -prune -exec rm -rf {} +
+
+      - name: Upload
+        if: env.HF_TOKEN != ''
+        run: |
+          pip install "huggingface_hub>=0.25"
+          python deploy/huggingface/push_space.py space
