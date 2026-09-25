@@ -37,3 +37,6 @@ build/
 dist/
 .gradio/
 flagged/
+
+# Example clips for the web demo are small and meant to be committed
+!examples/*.mp4
