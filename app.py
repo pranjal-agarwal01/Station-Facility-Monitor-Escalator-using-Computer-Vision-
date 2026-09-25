@@ -21,7 +21,6 @@ import cv2
 import gradio as gr
 import numpy as np
 from matplotlib.figure import Figure
-from matplotlib.patches import Rectangle
 
 from escalator_monitor.config import Config
 from escalator_monitor.detector import ReplayDetector, YoloPersonDetector
@@ -40,7 +39,8 @@ EXAMPLES_DIR = Path(os.environ.get("EXAMPLES_DIR", "examples"))  # optional real
 WORK_DIR = Path(tempfile.gettempdir()) / "escalator_monitor"
 REPO_URL = "https://github.com/pranjal-agarwal01/Station-Facility-Monitor-Escalator-using-Computer-Vision-"
 
-STATE_COLORS = {"WORKING": "#1f9d55", "STOPPED / FAULT": "#d64545", "IDLE": "#f0a202", "INITIALIZING": "#9aa0a6"}
+STATE_COLORS = {"WORKING": "#0ca30c", "STOPPED / FAULT": "#d03b3b", "IDLE": "#fab219", "INITIALIZING": "#898781"}
+STATE_LABELS = {"WORKING": "Working", "STOPPED / FAULT": "Stopped / fault", "IDLE": "Idle", "INITIALIZING": ""}
 CORNER_LABELS = ("TL", "TR", "BR", "BL")
 
 _detector_lock = threading.Lock()
@@ -228,6 +228,7 @@ def cleanup_old_runs(max_age_s: float = 3 * 3600) -> None:
 
 
 def timeline_figure(timeline_csv: str, cfg: Config) -> Figure | None:
+    """State band, move confidence and people count as three panels on one time axis."""
     rows = []
     with open(timeline_csv, newline="") as f:
         for r in csv.DictReader(f):
@@ -237,40 +238,45 @@ def timeline_figure(timeline_csv: str, cfg: Config) -> Figure | None:
     t = np.array([r[0] for r in rows])
     conf = np.array([r[2] for r in rows])
     people = np.array([r[3] for r in rows])
-    fig = Figure(figsize=(9, 3.6), layout="constrained")
-    ax_state, ax_conf = fig.subplots(2, 1, sharex=True, gridspec_kw={"height_ratios": [1, 3]})
+    ink, muted, grid, series = "#52514e", "#898781", "#e1e0d9", "#2a78d6"
+    fig = Figure(figsize=(9, 4.2), layout="constrained")
+    ax_state, ax_conf, ax_people = fig.subplots(3, 1, sharex=True, gridspec_kw={"height_ratios": [0.9, 3, 1.6]})
     step = np.median(np.diff(t)) if len(t) > 1 else 0.04
     start = 0
     for i in range(1, len(rows) + 1):
         if i == len(rows) or rows[i][1] != rows[start][1]:
-            ax_state.axvspan(t[start], t[i - 1] + step, color=STATE_COLORS.get(rows[start][1], "#999"), lw=0)
+            state = rows[start][1]
+            ax_state.axvspan(t[start], t[i - 1] + step, color=STATE_COLORS.get(state, muted), lw=0)
+            label = STATE_LABELS.get(state, state)
+            if t[i - 1] + step - t[start] > 0.12 * (t[-1] - t[0] + step):
+                ax_state.text(t[start] + step, 0.5, label, va="center", fontsize=8.5, fontweight="bold",
+                              color="#1a1a19" if state == "IDLE" else "white")  # fmt: skip
             start = i
     ax_state.set_yticks([])
-    ax_state.set_ylabel("state", rotation=0, ha="right", va="center")
-    handles = [Rectangle((0, 0), 1, 1, color=c) for s, c in STATE_COLORS.items() if s != "INITIALIZING"]
-    ax_state.legend(
-        handles,
-        ["Working", "Stopped / fault", "Idle"],
-        ncol=3,
-        loc="lower right",
-        bbox_to_anchor=(1, 1.02),
-        frameon=False,
-        fontsize=8,
-    )
-    ax_conf.plot(t, conf, color="#2b6cb0", lw=1.2, label="move confidence")
-    ax_conf.axhline(cfg.move_confidence_min, color="#2b6cb0", ls="--", lw=0.8, alpha=0.6, label="moving threshold")
+    ax_state.set_title("State", loc="left", fontsize=9, color=ink)
+
+    ax_conf.plot(t, conf, color=series, lw=2, solid_joinstyle="round")
+    ax_conf.axhline(cfg.move_confidence_min, color=muted, lw=1)
+    ax_conf.text(t[-1], cfg.move_confidence_min + 0.03, f"moving threshold {cfg.move_confidence_min:.2f}",
+                 ha="right", fontsize=8, color=muted)  # fmt: skip
     ax_conf.set_ylim(0, 1)
-    ax_conf.set_xlabel("video time (s)")
-    ax_conf.set_ylabel("confidence")
-    ax_people = ax_conf.twinx()
-    ax_people.step(t, people, where="post", color="#6b7280", lw=0.9, alpha=0.7, label="people in ROI")
-    ax_people.set_ylabel("people")
-    ax_people.set_ylim(0, max(3, people.max() + 1))
-    lines = ax_conf.get_legend_handles_labels()
-    extra = ax_people.get_legend_handles_labels()
-    ax_conf.legend(lines[0] + extra[0], lines[1] + extra[1], loc="upper right", fontsize=8, frameon=False)
-    for ax in (ax_state, ax_conf):
-        ax.spines[["top", "right"]].set_visible(False)
+    ax_conf.set_yticks([0, 0.5, 1])
+    ax_conf.set_title("Move confidence", loc="left", fontsize=9, color=ink)
+
+    ax_people.step(t, people, where="post", color=series, lw=2)
+    top = max(2, int(people.max()))
+    ax_people.set_ylim(0, top + 0.5)
+    ax_people.set_yticks([0, top])
+    ax_people.set_title("People in ROI", loc="left", fontsize=9, color=ink)
+    ax_people.set_xlabel("video time (s)", color=muted, fontsize=8.5)
+
+    for ax in (ax_state, ax_conf, ax_people):
+        ax.spines[["top", "right", "left"]].set_visible(False)
+        ax.spines["bottom"].set_color("#c3c2b7")
+        ax.tick_params(colors=muted, labelsize=8, length=0)
+        if ax is not ax_state:
+            ax.grid(axis="y", color=grid, lw=1)
+            ax.set_axisbelow(True)
     return fig
 
 
