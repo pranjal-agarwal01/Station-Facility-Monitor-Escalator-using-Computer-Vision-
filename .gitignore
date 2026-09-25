@@ -30,3 +30,10 @@ env/
 
 # OS
 Thumbs.db
+# Tooling
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+.gradio/
+flagged/

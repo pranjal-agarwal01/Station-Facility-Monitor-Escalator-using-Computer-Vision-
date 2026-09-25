@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "escalator-monitor"
+version = "2.0.0"
+description = "Detect working, stopped and idle escalators in CCTV video with YOLO and optical flow"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Pranjal Agarwal" }]
+requires-python = ">=3.10"
+keywords = ["computer-vision", "optical-flow", "yolo", "cctv", "escalator", "predictive-maintenance"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Scientific/Engineering :: Image Recognition",
+]
+dependencies = [
+    "numpy>=1.24",
+    "opencv-python>=4.8",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+detect = ["ultralytics>=8.3"]
+video = ["imageio-ffmpeg>=0.5"]
+web = ["gradio>=5.0", "matplotlib>=3.7", "imageio-ffmpeg>=0.5", "ultralytics>=8.3"]
+dev = ["pytest>=8", "ruff>=0.6", "imageio-ffmpeg>=0.5"]
+
+[project.scripts]
+escalator-monitor = "escalator_monitor.cli:main"
+
+[project.urls]
+Repository = "https://github.com/pranjal-agarwal01/Station-Facility-Monitor-Escalator-using-Computer-Vision-"
+
+[tool.setuptools.packages.find]
+include = ["escalator_monitor*"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM"]
+ignore = ["E501", "B905", "SIM108", "UP007"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

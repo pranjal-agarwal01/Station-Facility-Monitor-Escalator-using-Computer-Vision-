@@ -1,0 +1,30 @@
+# Per-camera overrides. List only what differs from the defaults in
+# escalator_monitor/config.py; everything else keeps its default value.
+
+input_video: input/stair2.mp4
+output_video: output/result.mp4
+
+# Escalator corners in source-video pixels: top-left, top-right, bottom-right, bottom-left.
+# Leave commented out to click them on the first frame (saved to output/roi_<video>.json).
+# roi_points: [[812, 140], [1105, 140], [1290, 1040], [640, 1040]]
+
+yolo_model: yolo11n.pt          # yolo11s.pt / yolo11m.pt are more accurate but slower
+person_conf_threshold: 0.35
+detect_every_n_frames: 3
+
+# Far or zoomed-out cameras produce smaller flow vectors: lower the gates.
+handrail_mag_gate: 0.08
+steps_mag_gate: 0.12
+
+# Stricter direction check for noisy scenes.
+vertical_ratio_min: 1.8
+
+# Shaky pole-mounted camera? Cancel the shake using the static background.
+compensate_camera_motion: false
+
+# Raise a WRONG DIRECTION alert if the surface moves the other way (image space).
+expected_direction: any
+
+# POST every state change as JSON (Slack/Teams incoming webhook, ticketing system, ...).
+webhook_url: ""
+save_fault_snapshots: true
