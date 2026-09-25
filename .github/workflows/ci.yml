@@ -32,6 +32,33 @@ jobs:
       - name: Test
         run: pytest
 
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install
+        run: |
+          npm ci --prefix web
+          pip install opencv-python-headless numpy pyyaml imageio-ffmpeg playwright
+          pip install -e . --no-deps
+          python -m playwright install --with-deps chromium
+      - name: Unit tests (browser code in Node)
+        run: npm test --prefix web
+      - name: Build the site and run the demo in headless Chromium
+        # No YOLO model here: the synthetic demo replays its recorded person boxes.
+        run: |
+          python web/build.py --out _site
+          python web/e2e_test.py _site
+
   docker:
     runs-on: ubuntu-latest
     needs: test

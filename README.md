@@ -1,7 +1,7 @@
 # Escalator Monitor
 
 [![CI](https://github.com/pranjal-agarwal01/Station-Facility-Monitor-Escalator-using-Computer-Vision-/actions/workflows/ci.yml/badge.svg)](https://github.com/pranjal-agarwal01/Station-Facility-Monitor-Escalator-using-Computer-Vision-/actions/workflows/ci.yml)
-[![Live demo](https://img.shields.io/badge/demo-Hugging%20Face%20Spaces-ffcc4d)](https://huggingface.co/spaces/pranjal-agarwal01/escalator-monitor)
+[![Live demo](https://img.shields.io/badge/live%20demo-runs%20in%20your%20browser-2a78d6)](https://pranjal-agarwal01.github.io/Station-Facility-Monitor-Escalator-using-Computer-Vision-/)
 ![Python](https://img.shields.io/badge/python-3.10%2B-3776ab)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
@@ -14,6 +14,10 @@ with an event log, fault snapshots and webhook alerts.
 It needs no new hardware and no training data. It combines a pretrained person
 detector (YOLO11) with dense optical flow, and every decision can be traced
 back to numbers shown on screen.
+
+**[Try the live demo](https://pranjal-agarwal01.github.io/Station-Facility-Monitor-Escalator-using-Computer-Vision-/)**: it runs entirely in your browser (YOLO through
+ONNX Runtime Web, optical flow through OpenCV.js), so there is nothing to
+install and your video never leaves your computer.
 
 <p align="center">
   <img src="docs/demo.gif" alt="Annotated output: the escalator stops while people are on it and the status switches to STOPPED / FAULT" width="480">
@@ -115,7 +119,16 @@ escalator-monitor run --input demo.mp4 --roi demo.roi.json --detector replay:dem
 escalator-monitor evaluate output/timeline.csv demo.gt.csv
 ```
 
-**Web app or Docker**
+**The browser version locally**
+
+```bash
+yolo export model=yolo11n.pt format=onnx imgsz=640     # Ultralytics CLI, writes yolo11n.onnx
+npm ci --prefix web
+python web/build.py --out _site --model yolo11n.onnx
+python -m http.server -d _site 8000                    # http://localhost:8000
+```
+
+**Gradio app or Docker** (server-side Python version of the web UI)
 
 ```bash
 pip install -e ".[web]" && python app.py               # http://localhost:7860
@@ -234,27 +247,34 @@ does not depend on the weight values.
 
 ## Put it online
 
-**Free live demo on Hugging Face Spaces (automatic):**
+**Free website on GitHub Pages (automatic).** The [`web/`](web/) folder is a
+static site: the whole pipeline is ported to JavaScript and runs in the
+visitor's browser, so there is no server to pay for or keep awake.
 
-1. Create a [Hugging Face](https://huggingface.co/join) account and an
-   [access token](https://huggingface.co/settings/tokens) with *write* permission.
-2. In this GitHub repository open *Settings → Secrets and variables → Actions*
-   and add a secret named `HF_TOKEN` with that token.
-3. Optionally add a *variable* `HF_SPACE` such as `your-hf-name/escalator-monitor`
-   (that name is the default).
-4. Push to `main`, or run the **Deploy demo** workflow from the Actions tab.
-   The Space is created on the first run and redeployed on every push. The
-   first build takes a few minutes; after that it is live at
-   `https://huggingface.co/spaces/<your-hf-name>/escalator-monitor`.
+1. In this repository open *Settings → Pages* and set *Build and deployment →
+   Source* to **GitHub Actions** (one time).
+2. Push to `main` (or run the **Website** workflow from the Actions tab). The
+   workflow runs the JavaScript tests, exports YOLO11n to ONNX, renders the
+   demo clips and publishes the site to `https://pranjal-agarwal01.github.io/Station-Facility-Monitor-Escalator-using-Computer-Vision-/`.
 
-The free CPU tier is enough: the app downsizes frames to 960 px and caps
-clips at 60 s (`PROCESS_WIDTH` and `MAX_SECONDS` environment variables). The
-Space also exposes an API:
+The browser version runs the same logic as the Python package, with these
+differences: optical flow is Farneback (OpenCV.js has no DIS), frames are
+sampled at up to 15 fps, the state machine's window is scaled to keep its
+1.8 s duration, and detection uses WebGPU when available, otherwise
+WebAssembly. Unit tests (`npm test --prefix web`) and a headless-Chromium test
+on the synthetic demo (`python web/e2e_test.py _site`) run in CI.
+
+**Gradio app (Python).** `app.py` serves the Python version through Gradio.
+It runs anywhere Docker runs (Render, Railway, Fly.io, Google Cloud Run, a
+station server) on port 7860. Hugging Face now requires a PRO subscription
+for Gradio Spaces; if you have one, add an `HF_TOKEN` secret and run the
+**Deploy Gradio app to Hugging Face** workflow by hand. The Gradio app also
+exposes an API:
 
 ```python
 from gradio_client import Client, handle_file
 
-client = Client("your-hf-name/escalator-monitor")
+client = Client("http://localhost:7860/")
 video, summary, *_ = client.predict(
     handle_file("clip.mp4"),
     "812,140,1105,140,1290,1040,640,1040",  # escalator corners in video pixels
@@ -267,9 +287,6 @@ video, summary, *_ = client.predict(
     api_name="/analyze",
 )
 ```
-
-**Anywhere else:** the Docker image serves the same app on port 7860, so it
-runs on Render, Railway, Fly.io, Google Cloud Run or a station server.
 
 **For real cameras:** run the CLI next to the cameras (an edge PC or a Jetson)
 with `--headless` and a webhook, one process per camera. Alerts go to Slack,
@@ -295,13 +312,20 @@ escalator_monitor/
   evaluate.py     metrics against labelled intervals
   benchmark.py    accuracy and speed suites
   cli.py          `escalator-monitor` command
-app.py            Gradio web app (also the Hugging Face Space)
+web/              the in-browser version (GitHub Pages site)
+  js/core.js      port of geometry, flow statistics, scoring, tracker, state machine
+  js/detector.js  YOLO11n through ONNX Runtime Web (WebGPU or WebAssembly)
+  js/video.js     frame-accurate seeking and MP4 frame-rate reader
+  js/app.js       UI: ROI clicks, analysis loop, replay, downloads
+  build.py        assembles the site (vendored JS/WASM, model, demo clips)
+app.py            Gradio web app (Python version)
 tests/            pytest suite, runs without model weights or GPU
 configs/          example per-camera config
-deploy/           Hugging Face Space files
+deploy/           Hugging Face Space files (optional)
 ```
 
-Run the checks locally with `pip install -e ".[dev]" && ruff check . && pytest`.
+Run the checks locally with `pip install -e ".[dev]" && ruff check . && pytest`
+and `npm ci --prefix web && npm test --prefix web`.
 
 ## Limitations and roadmap
 
@@ -315,7 +339,7 @@ Run the checks locally with `pip install -e ".[dev]" && ruff check . && pytest`.
 - **Synthetic accuracy numbers.** They validate the logic. Real-world accuracy
   should be measured per site with `evaluate`.
 
-Done: camera-shake compensation, wrong-direction alerts, web demo, evaluation tooling.
+Done: camera-shake compensation, wrong-direction alerts, in-browser version, evaluation tooling.
 
 Next:
 - [ ] Automatic escalator localisation (segmentation or a custom YOLO class)
@@ -327,8 +351,9 @@ Next:
 ## Tech stack
 
 Python 3.10+, OpenCV (DIS optical flow, video I/O), Ultralytics YOLO11
-(PyTorch), NumPy, Gradio, imageio-ffmpeg, PyYAML, pytest, ruff, GitHub
-Actions, Docker, Hugging Face Spaces.
+(PyTorch), NumPy, Gradio, imageio-ffmpeg, PyYAML, pytest, ruff. In the
+browser: ONNX Runtime Web (WebGPU/WebAssembly), OpenCV.js, plain ES modules,
+SVG charts. GitHub Actions for CI and GitHub Pages, Docker.
 
 ## References
 
@@ -339,4 +364,5 @@ Actions, Docker, Hugging Face Spaces.
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE). The YOLO11 model and the Ultralytics library are licensed
+separately by Ultralytics under AGPL-3.0.

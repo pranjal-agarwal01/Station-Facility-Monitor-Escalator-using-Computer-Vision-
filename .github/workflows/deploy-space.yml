@@ -1,19 +1,12 @@
-name: Deploy demo
+name: Deploy Gradio app to Hugging Face
 
-# Publishes app.py + the package to a Hugging Face Space on every push to main.
-# One-time setup: add a repository secret HF_TOKEN (a Hugging Face token with
-# write access). Optionally set a repository variable HF_SPACE (user/space-name);
-# the default is <your HF user>/escalator-monitor, created on first deploy.
+# Optional, run by hand: publishes the Python/Gradio app (app.py) to a Hugging
+# Face Space. Gradio Spaces now need a Hugging Face PRO subscription; the free
+# public demo is the in-browser site deployed by pages.yml.
+# Setup: repository secret HF_TOKEN (write token) and optionally a variable
+# HF_SPACE (user/space-name, default <your HF user>/escalator-monitor).
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "app.py"
-      - "escalator_monitor/**"
-      - "examples/**"
-      - "deploy/huggingface/**"
-      - ".github/workflows/deploy-space.yml"
   workflow_dispatch:
 
 concurrency:
