@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Escalator Monitor</title>
+    <meta
+      name="description"
+      content="Detect working, stopped and idle escalators in CCTV video. Runs entirely in your browser: YOLO person detection and optical flow, no upload."
+    />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230ca30c'/%3E%3Cpath d='M7 24h5l8-14h5' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="css/style.css" />
+    <script type="module" src="js/app.js"></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="wrap header-row">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <div>
+            <h1>Escalator Monitor</h1>
+            <p class="tagline">Is the escalator working, stopped with people on it, or idle? Find out from ordinary CCTV footage.</p>
+          </div>
+        </div>
+        <a class="repo-link" href="https://github.com/pranjal-agarwal01/Station-Facility-Monitor-Escalator-using-Computer-Vision-" rel="noopener">Source on GitHub</a>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <p class="privacy-note">
+        Everything runs in this browser tab: YOLO person detection (ONNX Runtime) and optical flow (OpenCV.js).
+        Your video is never uploaded.
+      </p>
+
+      <section class="card" id="step-video" aria-labelledby="h-video">
+        <h2 id="h-video"><span class="step-num">1</span>Choose a video</h2>
+        <div class="choose-row">
+          <label class="drop-zone" id="drop-zone">
+            <input type="file" id="file-input" accept="video/*" />
+            <strong>Upload a clip</strong>
+            <span>from a fixed camera, or drop it here. MP4 (H.264) works everywhere.</span>
+          </label>
+          <div class="demo-list" id="demo-list" aria-label="Example clips"></div>
+        </div>
+      </section>
+
+      <section class="card" id="step-roi" aria-labelledby="h-roi" hidden>
+        <h2 id="h-roi"><span class="step-num">2</span>Mark the escalator</h2>
+        <p class="hint" id="roi-hint">Click the four corners of the escalator, including both handrails.</p>
+        <div class="roi-wrap">
+          <canvas id="roi-canvas" aria-label="First frame of the video. Click four corners of the escalator."></canvas>
+        </div>
+        <div class="roi-tools">
+          <button type="button" class="btn ghost" id="undo-btn">Undo point</button>
+          <button type="button" class="btn ghost" id="reset-btn">Clear</button>
+          <label class="roi-text-label">
+            Corners in video pixels
+            <input type="text" id="roi-text" placeholder="x1,y1, x2,y2, x3,y3, x4,y4" spellcheck="false" />
+          </label>
+        </div>
+        <details class="settings">
+          <summary>Settings</summary>
+          <div class="settings-grid">
+            <label>
+              <span>Move confidence needed <output id="sensitivity-value">0.35</output></span>
+              <input type="range" id="sensitivity" min="0.15" max="0.6" step="0.05" value="0.35" />
+              <small>Lower is more sensitive to slow or distant escalators.</small>
+            </label>
+            <label>
+              <span>Analyse at most <output id="max-seconds-value">30 s</output></span>
+              <input type="range" id="max-seconds" min="5" max="120" step="5" value="30" />
+            </label>
+            <label>
+              <span>Run the person detector every</span>
+              <select id="detect-every">
+                <option value="1">frame</option>
+                <option value="2">2 frames</option>
+                <option value="3" selected>3 frames</option>
+                <option value="5">5 frames</option>
+              </select>
+            </label>
+            <label>
+              <span>Expected direction</span>
+              <select id="direction">
+                <option value="any" selected>Any (no alert)</option>
+                <option value="up">Up in the image</option>
+                <option value="down">Down in the image</option>
+              </select>
+            </label>
+            <label class="check">
+              <input type="checkbox" id="shake" />
+              <span>Compensate camera shake</span>
+            </label>
+          </div>
+        </details>
+        <div class="run-row">
+          <button type="button" class="btn primary" id="analyse-btn">Analyse</button>
+          <button type="button" class="btn ghost" id="cancel-btn" hidden>Stop</button>
+          <div class="progress" id="progress" hidden>
+            <div class="progress-bar"><span id="progress-fill"></span></div>
+            <span class="progress-text" id="progress-text"></span>
+          </div>
+        </div>
+      </section>
+
+      <div class="error" id="error" role="alert" hidden></div>
+
+      <section class="card" id="results" aria-labelledby="h-results" hidden>
+        <h2 id="h-results"><span class="step-num">3</span>Results</h2>
+        <div class="results-top">
+          <div class="player">
+            <canvas id="replay-canvas" aria-label="Annotated video"></canvas>
+            <div class="player-controls">
+              <button type="button" class="btn icon" id="play-btn" aria-label="Play">Play</button>
+              <input type="range" id="replay-slider" min="0" max="0" value="0" aria-label="Position" />
+              <span class="replay-time" id="replay-time">0.00 s</span>
+            </div>
+          </div>
+          <div class="summary">
+            <div class="final" id="final-state"></div>
+            <div class="tiles" id="tiles"></div>
+            <p class="gt-note" id="gt-note" hidden></p>
+            <p class="run-info" id="run-info"></p>
+          </div>
+        </div>
+
+        <h3>Timeline</h3>
+        <p class="hint">Hover for details, click to jump the video to that moment.</p>
+        <div class="chart" id="chart"></div>
+
+        <div class="results-bottom">
+          <div>
+            <h3>State changes</h3>
+            <table class="events">
+              <thead>
+                <tr><th>Video time</th><th>Change</th><th>People</th><th>Confidence</th></tr>
+              </thead>
+              <tbody id="events-body"></tbody>
+            </table>
+          </div>
+          <div>
+            <h3>Fault snapshots</h3>
+            <div class="snapshots" id="snapshots"><p class="hint">No faults detected.</p></div>
+          </div>
+        </div>
+
+        <h3>Downloads</h3>
+        <div class="downloads" id="downloads"></div>
+      </section>
+
+      <section class="how" aria-labelledby="h-how">
+        <h2 id="h-how">How it works</h2>
+        <ol>
+          <li><strong>People.</strong> YOLO11n finds people inside the marked region every few frames; a small tracker keeps their boxes in between.</li>
+          <li><strong>Surface motion.</strong> Dense optical flow (Farneback) measures how the handrails and steps move, with people masked out, so someone walking on a stopped escalator does not count as motion.</li>
+          <li><strong>Checks.</strong> Motion must be mostly vertical and both handrails must agree on the direction.</li>
+          <li><strong>Decision.</strong> A state machine with separate enter and exit thresholds turns ~2 seconds of evidence into a stable state: <em>working</em>, <em>stopped with people on it</em> (fault) or <em>idle</em>.</li>
+        </ol>
+        <p>
+          The full Python version adds live RTSP cameras, webhook alerts, a CLI and a test suite:
+          <a href="https://github.com/pranjal-agarwal01/Station-Facility-Monitor-Escalator-using-Computer-Vision-" rel="noopener">see the repository</a>.
+        </p>
+      </section>
+    </main>
+
+    <footer class="site-footer wrap">
+      <span>MIT licensed. Person detector: Ultralytics YOLO11n (AGPL-3.0).</span>
+    </footer>
+
+    <video id="video" class="video-source" muted playsinline preload="auto" aria-hidden="true"></video>
+  </body>
+</html>
