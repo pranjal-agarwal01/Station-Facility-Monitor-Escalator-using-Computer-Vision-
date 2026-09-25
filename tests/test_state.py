@@ -43,6 +43,15 @@ def test_riders_leaving_before_stop_is_not_a_fault():
     assert history[-1] == State.IDLE
 
 
+def test_people_who_already_left_do_not_turn_idle_into_a_fault():
+    sm = EscalatorStateMachine(Config())
+    feed(sm, 45, True, True)
+    feed(sm, 19, False, True)  # stopped with riders on it, briefly
+    history = [sm.update(False, False, 0.0) for _ in range(60)]
+    assert State.STOPPED not in history
+    assert history[-1] == State.IDLE
+
+
 def test_stopped_from_idle_needs_people():
     sm = EscalatorStateMachine(Config())
     assert feed(sm, 45, False, False) == State.IDLE

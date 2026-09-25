@@ -95,7 +95,10 @@ class EscalatorStateMachine:
             if mr >= cfg.enter_working_ratio or avg > cfg.enter_working_score:
                 new = State.WORKING
             elif (
-                pr >= cfg.stopped_people_ratio and (1.0 - mr) >= cfg.enter_stopped_ratio and avg < cfg.stopped_score_max
+                pr >= cfg.stopped_people_ratio
+                and w.recent_people_ratio >= cfg.stopped_people_ratio  # people there now, not just earlier
+                and (1.0 - mr) >= cfg.enter_stopped_ratio
+                and avg < cfg.stopped_score_max
             ):
                 new = State.STOPPED
             elif pr < cfg.idle_people_ratio and state == State.INITIALIZING:
