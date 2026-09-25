@@ -737,7 +737,9 @@ async function init() {
     const b = document.createElement("button");
     b.type = "button";
     b.className = "demo";
-    b.innerHTML = `<strong>${demo.title}</strong><span>${demo.description}</span>`;
+    b.dataset.demoId = demo.id;
+    const poster = demo.poster ? `<img src="${new URL(demo.poster, SITE).href}" alt="" loading="lazy" />` : "<span></span>";
+    b.innerHTML = `${poster}<div><span class="tag">${demo.tag || "Example"}</span><strong>${demo.title}</strong><span>${demo.description}</span></div>`;
     b.addEventListener("click", () => openDemo(demo));
     ui.demoList.append(b);
   }
@@ -745,6 +747,15 @@ async function init() {
     ui.dropZone.querySelector("span").textContent = "Uploads need the person detector, which this build does not include.";
   }
 }
+
+$("hero-demo").addEventListener("click", () => {
+  if (site.demos.length) openDemo(site.demos[0]);
+  else $("try").scrollIntoView({ behavior: "smooth" });
+});
+$("hero-upload").addEventListener("click", () => {
+  $("try").scrollIntoView({ behavior: "smooth" });
+  ui.fileInput.click();
+});
 
 // Small hook for automated browser tests.
 window.escalatorMonitor = {

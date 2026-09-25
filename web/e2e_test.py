@@ -61,7 +61,7 @@ def main() -> int:
             page = browser.new_page(viewport={"width": 1280, "height": 900})
             page.on("pageerror", lambda e: errors.append(str(e)))
             page.goto(url)
-            page.get_by_text("Synthetic clip: running, fault, running, idle").click()
+            page.click('[data-demo-id="fault-cycle"]')
             page.wait_for_function("() => document.getElementById('roi-text').value.length > 0", timeout=60_000)
             page.click("#analyse-btn")
             result = wait_for_run(page)
