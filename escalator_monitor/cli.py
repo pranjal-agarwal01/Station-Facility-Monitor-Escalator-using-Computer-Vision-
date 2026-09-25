@@ -28,7 +28,7 @@ def _add_run(sub: argparse._SubParsersAction) -> None:
     p.add_argument("--input", help="video file, RTSP/HTTP URL or webcam index")
     p.add_argument("--output", help="annotated output video ('' to disable)")
     p.add_argument("--output-dir", help="put every output file in this directory")
-    p.add_argument("--roi", help="escalator corners 'x1,y1,x2,y2,x3,y3,x4,y4' in source pixels")
+    p.add_argument("--roi", help="escalator corners 'x1,y1,x2,y2,x3,y3,x4,y4' in source pixels, or a roi .json file")
     p.add_argument("--webhook", help="POST each state change as JSON to this URL")
     p.add_argument("--detector", default="yolo", help="'yolo' (default), 'none', or 'replay:<boxes.json>'")
     p.add_argument("--headless", action="store_true", help="no preview window (servers, Docker, CI)")
@@ -59,7 +59,8 @@ def _config_from_args(args: argparse.Namespace) -> Config:
     if args.roi:
         from .geometry import Quad
 
-        cfg.roi_points = Quad.parse(args.roi).to_list()
+        quad = Quad.load(args.roi) if args.roi.lower().endswith(".json") else Quad.parse(args.roi)
+        cfg.roi_points = quad.to_list()
     overrides = {
         "webhook_url": args.webhook,
         "max_frames": args.max_frames,

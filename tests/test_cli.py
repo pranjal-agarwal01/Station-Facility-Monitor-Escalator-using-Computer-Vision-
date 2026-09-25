@@ -6,7 +6,7 @@ from escalator_monitor.cli import main
 def test_synth_run_evaluate(tmp_path, capsys):
     video = tmp_path / "demo.mp4"
     assert main(["synth", str(video), "--segments", "moving:3:2,stopped:4:3", "--width", "480", "--height", "360"]) == 0
-    roi = ",".join(str(v) for p in json.loads((tmp_path / "demo.roi.json").read_text())["points"] for v in p)
+    roi = str(tmp_path / "demo.roi.json")
     out = tmp_path / "out"
     code = main(
         [
